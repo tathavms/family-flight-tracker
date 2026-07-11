@@ -250,81 +250,6 @@ input::placeholder { color: var(--muted); }
   100% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0); }
 }
 
-/* ---------- Flight card ---------- */
-.flight-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 1.2rem;
-}
-.flight-route-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-family: var(--font-display);
-  color: var(--muted);
-  font-size: 0.85rem;
-  margin-bottom: 0.6rem;
-  letter-spacing: 0.06em;
-}
-.route-line-label { color: var(--line); }
-
-.flight-map {
-  height: 260px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--panel-alt);
-  margin-bottom: 1rem;
-}
-
-.flight-readout {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
-}
-.stat { display: flex; flex-direction: column; gap: 0.15rem; }
-.stat-label {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-}
-.stat-value {
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  color: var(--text);
-}
-.flight-note {
-  margin: 1rem 0 0;
-  font-size: 0.82rem;
-  color: var(--muted);
-  line-height: 1.5;
-  border-top: 1px solid var(--line);
-  padding-top: 0.8rem;
-}
-.flight-note a { color: var(--teal); }
-.flight-fallback-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin-top: 0.85rem;
-  min-height: 44px;
-  padding: 0.75rem 0.9rem;
-  border-radius: 8px;
-  background: var(--amber);
-  color: #1a1305 !important;
-  font-weight: 700;
-  text-decoration: none;
-}
-.flight-fallback-link:hover { filter: brightness(1.08); }
-
-.plane-icon {
-  color: var(--amber);
-  filter: drop-shadow(0 0 4px var(--amber-glow));
-  transform-origin: center center;
-}
-
 /* ---------- Family location sharing ---------- */
 .share-controls {
   display: flex;
@@ -454,10 +379,6 @@ input::placeholder { color: var(--muted); }
   .section-head h2 { font-size: 0.82rem; }
   .sync-badge { text-align: right; max-width: 9rem; }
   .clock-time { font-size: 1.75rem; }
-  .flight-card { padding: 0.9rem; }
-  .flight-map { height: 240px; }
-  .flight-readout { gap: 0.7rem; }
-  .stat-value { font-size: 0.88rem; overflow-wrap: anywhere; }
   .share-controls { flex-direction: column; }
   .share-controls .btn { width: 100%; }
   .family-map { height: 340px; }
@@ -470,9 +391,6 @@ input::placeholder { color: var(--muted); }
   .brand h1 { font-size: 1.1rem; }
   .section { margin-bottom: 2.25rem; }
   .clock-card { padding: 1.4rem 1rem; }
-  .flight-map { height: 280px; }
-  .flight-readout { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
-  .flight-fallback-link { display: inline-flex; width: auto; }
   .share-controls input { flex: 1; min-width: 160px; }
   .share-controls .btn { width: auto; }
   .family-map { height: 360px; }
