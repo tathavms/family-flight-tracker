@@ -1,545 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Family Dashboard & Flight Tracker</title>
-    <!-- Leaflet Map CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --accent-color: #00ffcc;
-            --text-color: #e0e0e0;
-            --text-muted: #888888;
-            --border-color: #2d2d2d;
-            --google-green: #1ebd60;
-            --google-blue: #4285f4;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Flight Deck — Family Dashboard</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Private family dashboard: world clocks, live flight tracker, and location sharing.">
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-        .dashboard {
-            width: 100%;
-            max-width: 950px;
-        }
+<!-- Leaflet (maps) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-        .controls {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 20px;
-        }
-
-        .btn {
-            background-color: var(--card-bg);
-            color: var(--accent-color);
-            border: 1px solid var(--accent-color);
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
-
-        .btn:hover {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-        }
-
-        .clocks-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .clock-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 30px 20px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-
-        .location-title {
-            font-size: 1.2rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-        }
-
-        .time-display {
-            font-size: 3.5rem;
-            font-weight: 700;
-            color: var(--accent-color);
-            font-family: 'Courier New', Courier, monospace;
-            margin: 15px 0;
-        }
-
-        .date-display {
-            font-size: 1.1rem;
-            color: var(--text-color);
-        }
-
-        /* Google-Style Flight Card Design */
-        .flight-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-
-        .flight-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-
-        .flight-info-meta {
-            font-size: 1.1rem;
-        }
-
-        .flight-number {
-            font-weight: bold;
-            font-size: 1.4rem;
-            margin-right: 10px;
-        }
-
-        .flight-status-badge {
-            background-color: rgba(30, 189, 96, 0.15);
-            color: var(--google-green);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-weight: bold;
-            border: 1px solid var(--google-green);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-        }
-
-        .flight-visualizer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .airport-block {
-            font-size: 2.8rem;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        .progress-track-container {
-            flex-grow: 1;
-            margin: 0 30px;
-            text-align: center;
-            position: relative;
-        }
-
-        .duration-label {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 5px;
-            display: block;
-        }
-
-        .track-line {
-            height: 2px;
-            background: #444;
-            width: 100%;
-            position: relative;
-            margin-top: 10px;
-        }
-
-        .track-fill {
-            height: 100%;
-            background: var(--google-green);
-            width: 0%;
-            position: absolute;
-            left: 0;
-            top: 0;
-        }
-
-        .plane-marker {
-            position: absolute;
-            top: -13px;
-            left: 0%;
-            transform: translateX(-50%); 
-            color: var(--google-green);
-            font-size: 1.2rem;
-            transition: left 0.5s linear;
-        }
-
-        .live-countdown-text {
-            display: block;
-            margin-top: 8px;
-            font-size: 0.9rem;
-            color: var(--google-blue);
-            font-weight: 500;
-        }
-
-        .flight-details-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .airport-detail h4 {
-            margin: 0 0 5px 0;
-            color: var(--text-muted);
-            font-weight: normal;
-        }
-
-        .time-actual {
-            font-size: 1.6rem;
-            font-weight: bold;
-            color: var(--google-green);
-        }
-
-        .time-scheduled {
-            text-decoration: line-through;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-left: 5px;
-        }
-
-        .gate-info {
-            margin-top: 5px;
-            font-size: 0.95rem;
-        }
-
-        .map-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-
-        .map-header {
-            margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        .map-utilities {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .map-input {
-            background: #2b2b2b;
-            border: 1px solid var(--border-color);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            flex-grow: 1;
-        }
-
-        #map {
-            height: 450px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
-        @media (max-width: 650px) {
-            .clocks-container, .flight-details-grid {
-                grid-template-columns: 1fr;
-            }
-            .airport-block { font-size: 2rem; }
-            .time-display { font-size: 2.8rem; }
-            .flight-visualizer { flex-direction: column; gap: 10px;}
-            .progress-track-container { width: 100%; margin: 15px 0; }
-        }
-    </style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="dashboard">
-        <div class="controls">
-            <button class="btn" id="formatToggle">Switch to 24-Hour</button>
-        </div>
+<!-- ============ Optional family passcode gate (disabled unless set in app.js) ============ -->
+<div id="gate" class="gate hidden">
+  <div class="gate-card">
+    <p class="eyebrow">Family only</p>
+    <h2>Enter the family passcode</h2>
+    <input id="gate-input" type="password" inputmode="text" autocomplete="off" placeholder="Passcode">
+    <button id="gate-submit" class="btn btn-amber">Unlock</button>
+    <p id="gate-error" class="gate-error hidden">That's not it — try again.</p>
+  </div>
+</div>
 
-        <!-- Clocks Section -->
-        <div class="clocks-container">
-            <div class="clock-card">
-                <div class="location-title">India (IST)</div>
-                <div class="time-display" id="ist-time">00:00:00 AM</div>
-                <div class="date-display" id="ist-date">Loading date...</div>
-            </div>
+<div id="app" class="app hidden">
 
-            <div class="clock-card">
-                <div class="location-title">Charlotte (EST/EDT)</div>
-                <div class="time-display" id="clt-time">00:00:00 AM</div>
-                <div class="date-display" id="clt-date">Loading date...</div>
-            </div>
-        </div>
-
-        <!-- Flight Status Display (July 11 Architecture) -->
-        <div class="flight-card">
-            <div class="flight-header">
-                <div class="flight-info-meta">
-                    <span class="flight-number">LH 428</span>
-                    <span style="color: var(--text-muted)">to Charlotte CLT</span>
-                </div>
-                <span class="flight-status-badge" id="flight-status-pill">Loading Status...</span>
-            </div>
-
-            <div class="flight-visualizer">
-                <div class="airport-block">MUC</div>
-                <div class="progress-track-container">
-                    <span class="duration-label">9h 40m flight duration</span>
-                    <div class="track-line">
-                        <div class="track-fill" id="ui-track-fill"></div>
-                        <div class="plane-marker" id="ui-plane-marker">✈</div>
-                    </div>
-                    <span class="live-countdown-text" id="ui-countdown-msg">Calculating flight progress...</span>
-                </div>
-                <div class="airport-block">CLT</div>
-            </div>
-
-            <div class="flight-details-grid">
-                <div class="airport-detail">
-                    <h4>Munich • Sat, 11 Jul</h4>
-                    <div>
-                        <span class="time-actual">1:15 pm</span>
-                        <span class="time-scheduled">1:05 pm</span>
-                    </div>
-                    <div class="gate-info">Terminal <strong>2</strong> • Gate <strong>L27</strong></div>
-                </div>
-                <div class="airport-detail" style="text-align: right;">
-                    <h4>Charlotte • Sat, 11 Jul</h4>
-                    <div>
-                        <span class="time-scheduled">4:45 pm</span>
-                        <span class="time-actual">4:28 pm</span>
-                    </div>
-                    <div class="gate-info">Terminal <strong>-</strong> • Gate <strong>D12</strong></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Map Section -->
-        <div class="map-card">
-            <h3 class="map-header">Family Live Location Sharing</h3>
-            <div class="map-utilities">
-                <button class="btn" onclick="shareMyLocation()">📍 Show My Location</button>
-                <input type="text" class="map-input" id="coordInput" placeholder="Or paste coordinates shared by family (e.g., 35.2271, -80.8431)">
-                <button class="btn" onclick="plotSharedLocation()">Pin Location</button>
-            </div>
-            <div id="map"></div>
-        </div>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">✈</span>
+      <div>
+        <h1>Flight Deck</h1>
+        <p class="subtitle">Family dashboard</p>
+      </div>
     </div>
+    <div class="format-toggle" role="group" aria-label="Clock format">
+      <button id="fmt-12" class="fmt-btn" data-fmt="12">12H</button>
+      <button id="fmt-24" class="fmt-btn" data-fmt="24">24H</button>
+    </div>
+  </header>
 
-    <!-- Leaflet Map Script -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // --- TIMELINE CONSTANTS FOR FLIGHT LH428 ON JULY 11 (UTC BASELINES) ---
-        // Munich Departure: 1:15 PM CEST -> 11:15 UTC
-        const DEPARTURE_UTC = Date.UTC(2026, 6, 11, 11, 15, 0); 
-        // Charlotte Arrival: 4:28 PM EDT -> 20:28 UTC
-        const ARRIVAL_UTC = Date.UTC(2026, 6, 11, 20, 28, 0);
-        const TOTAL_FLIGHT_MS = ARRIVAL_UTC - DEPARTURE_UTC;
+  <main>
 
-        // Airport Geospatial Baselines
-        const MUC_COORDS = [48.3538, 11.7861];
-        const CLT_COORDS = [35.2140, -80.9473];
+    <!-- ============ Section 1: World clocks ============ -->
+    <section class="section" aria-labelledby="clocks-heading">
+      <div class="section-head">
+        <h2 id="clocks-heading">World clocks</h2>
+        <span id="sync-badge" class="sync-badge">Syncing time…</span>
+      </div>
+      <div class="clocks">
+        <article class="clock-card" id="clock-ist">
+          <p class="clock-zone">IST · India</p>
+          <p class="clock-time" id="time-ist">--:--:--</p>
+          <p class="clock-date" id="date-ist">—</p>
+        </article>
+        <article class="clock-card" id="clock-clt">
+          <p class="clock-zone">Charlotte, USA</p>
+          <p class="clock-time" id="time-clt">--:--:--</p>
+          <p class="clock-date" id="date-clt">—</p>
+        </article>
+      </div>
+    </section>
 
-        let is24Hour = false;
-        let timeOffsetMs = 0; 
-        
-        const formatToggleBtn = document.getElementById('formatToggle');
-        formatToggleBtn.addEventListener('click', () => {
-            is24Hour = !is24Hour;
-            formatToggleBtn.textContent = is24Hour ? "Switch to 12-Hour" : "Switch to 24-Hour";
-            updateClocks();
-        });
+    <!-- ============ Section 2: Flight tracker ============ -->
+    <section class="section" aria-labelledby="flight-heading">
+      <div class="section-head">
+        <h2 id="flight-heading">
+          <span id="flight-live-dot" class="live-dot"></span>
+          Flight <span id="flight-number">LH428</span>
+        </h2>
+        <button id="flight-refresh" class="btn btn-ghost" title="Refresh now">↻ Refresh</button>
+      </div>
 
-        async function syncNetworkTime() {
-            try {
-                const response = await fetch('https://gateway.timeapi.world/timezone/Etc/UTC');
-                if (!response.ok) throw new Error("API Network response down");
-                const data = await response.json();
-                
-                const trueTimeMs = data.unixtime * 1000; 
-                const localTimeMs = Date.now();
-                timeOffsetMs = trueTimeMs - localTimeMs;
-            } catch (error) {
-                console.warn("[Sync Failed] API unavailable. Defaulting to local hardware clocks.", error);
-            }
-        }
+      <div class="flight-card">
+        <div class="flight-route-label">
+          <span id="flight-origin">MUC</span>
+          <span class="route-line-label">‑ ‑ ‑ ‑ ‑ ‑</span>
+          <span id="flight-dest">CLT</span>
+        </div>
 
-        function updateClocks() {
-            const trueNow = new Date(Date.now() + timeOffsetMs);
+        <div id="flight-map" class="flight-map"></div>
 
-            const timeOptions = (tz) => ({
-                timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: !is24Hour
-            });
-            const dateOptions = (tz) => ({
-                timeZone: tz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-            });
+        <div class="flight-readout">
+          <div class="stat">
+            <span class="stat-label">Status</span>
+            <span class="stat-value" id="flight-status">Checking…</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Altitude</span>
+            <span class="stat-value" id="flight-altitude">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Ground speed</span>
+            <span class="stat-value" id="flight-speed">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Progress</span>
+            <span class="stat-value" id="flight-progress">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Last update</span>
+            <span class="stat-value" id="flight-updated">—</span>
+          </div>
+        </div>
+        <p id="flight-note" class="flight-note hidden"></p>
+      </div>
+    </section>
 
-            document.getElementById('ist-time').textContent = trueNow.toLocaleTimeString('en-US', timeOptions('Asia/Kolkata'));
-            document.getElementById('ist-date').textContent = trueNow.toLocaleDateString('en-US', dateOptions('Asia/Kolkata'));
+    <!-- ============ Section 3: Family location sharing ============ -->
+    <section class="section" aria-labelledby="map-heading">
+      <div class="section-head">
+        <h2 id="map-heading">Family location</h2>
+      </div>
 
-            document.getElementById('clt-time').textContent = trueNow.toLocaleTimeString('en-US', timeOptions('America/New_York'));
-            document.getElementById('clt-date').textContent = trueNow.toLocaleDateString('en-US', dateOptions('America/New_York'));
+      <div class="share-controls">
+        <input id="share-name" type="text" placeholder="Your name" maxlength="24">
+        <button id="share-btn" class="btn btn-teal">Share my location</button>
+      </div>
+      <p id="share-status" class="share-status"></p>
 
-            // Core Flight Processing Loop
-            processFlightStatus(trueNow.getTime());
-        }
+      <div id="family-map" class="family-map"></div>
 
-        function processFlightStatus(currentUtcMs) {
-            const statusPill = document.getElementById('flight-status-pill');
-            const fillBar = document.getElementById('ui-track-fill');
-            const planeMarker = document.getElementById('ui-plane-marker');
-            const countdownMsg = document.getElementById('ui-countdown-msg');
+      <ul id="sharers-list" class="sharers-list"></ul>
+    </section>
 
-            // Scenario A: Pre-departure phase
-            if (currentUtcMs < DEPARTURE_UTC) {
-                const diffMin = Math.ceil((DEPARTURE_UTC - currentUtcMs) / 60000);
-                statusPill.textContent = "Departing on Time";
-                statusPill.style.color = "var(--google-green)";
-                statusPill.style.borderColor = "var(--google-green)";
-                statusPill.style.backgroundColor = "rgba(30,189,96,0.15)";
-                
-                fillBar.style.width = `0%`;
-                planeMarker.style.left = `0%`;
-                
-                if (diffMin > 60) {
-                    const hours = Math.floor(diffMin / 60);
-                    countdownMsg.textContent = `Departs in ${hours}h ${diffMin % 60}m`;
-                } else {
-                    countdownMsg.textContent = `Departs in ${diffMin}m`;
-                }
-                updatePlaneOnMap(null); 
-            } 
-            // Scenario B: Active flight tracking window
-            else if (currentUtcMs >= DEPARTURE_UTC && currentUtcMs <= ARRIVAL_UTC) {
-                const elapsedMs = currentUtcMs - DEPARTURE_UTC;
-                const progressPct = (elapsedMs / TOTAL_FLIGHT_MS) * 100;
-                
-                statusPill.textContent = "In Flight";
-                statusPill.style.color = "var(--google-blue)";
-                statusPill.style.borderColor = "var(--google-blue)";
-                statusPill.style.backgroundColor = "rgba(66,133,244,0.15)";
-                
-                fillBar.style.width = `${progressPct}%`;
-                planeMarker.style.left = `${progressPct}%`;
-                
-                const remainingMs = ARRIVAL_UTC - currentUtcMs;
-                const remHours = Math.floor(remainingMs / 3600000);
-                const remMinutes = Math.floor((remainingMs % 3600000) / 60000);
-                countdownMsg.textContent = `${remHours}h ${remMinutes}m remaining to destination`;
+  </main>
 
-                // Calculate aircraft geographic path position (Linear Interpolation)
-                const interpolationFactor = elapsedMs / TOTAL_FLIGHT_MS;
-                const currentLat = MUC_COORDS[0] + (CLT_COORDS[0] - MUC_COORDS[0]) * interpolationFactor;
-                const currentLon = MUC_COORDS[1] + (CLT_COORDS[1] - MUC_COORDS[1]) * interpolationFactor;
-                
-                updatePlaneOnMap([currentLat, currentLon]);
-            } 
-            // Scenario C: Post-arrival landing
-            else {
-                statusPill.textContent = "Arrived / Landed";
-                statusPill.style.color = "var(--text-muted)";
-                statusPill.style.borderColor = "var(--border-color)"; // <-- Syntax fix here
-                statusPill.style.backgroundColor = "rgba(255,255,255,0.05)";
-                
-                fillBar.style.width = `100%`;
-                planeMarker.style.left = `100%`;
-                countdownMsg.textContent = "Flight safely arrived at CLT Terminal D.";
-                updatePlaneOnMap(CLT_COORDS);
-            }
-        }
+  <footer class="foot">
+    <p>Private family page · not indexed · positions clear automatically when sharing stops</p>
+  </footer>
 
-        // --- MAP UTILITY HOOKS ---
-        const map = L.map('map').setView([40.0, -35.0], 3); 
+</div>
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19, attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-        // Draw flight plan corridor baseline across map
-        const flightPathLine = L.polyline([MUC_COORDS, CLT_COORDS], {
-            color: '#555555', weight: 3, dashArray: '6, 6', opacity: 0.6
-        }).addTo(map);
-
-        let familyMarker = null;
-        let flightLiveMarker = null;
-
-        function updatePlaneOnMap(coords) {
-            if (!coords) {
-                if (flightLiveMarker) { map.removeLayer(flightLiveMarker); flightLiveMarker = null; }
-                return;
-            }
-            
-            // Create a custom styled HTML marker element representing the plane
-            const planeIcon = L.divIcon({
-                html: `<div style="transform: scaleX(-1); font-size: 24px; color: #4285f4; text-shadow: 0px 0px 4px #000;">✈</div>`,
-                className: 'custom-plane-div',
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
-
-            if (flightLiveMarker) {
-                flightLiveMarker.setLatLng(coords);
-            } else {
-                flightLiveMarker = L.marker(coords, {icon: planeIcon}).addTo(map)
-                    .bindPopup("<b>LH 428</b> Live Telemetry View Mode");
-            }
-        }
-
-        function shareMyLocation() {
-            if (!navigator.geolocation) { alert("Geolocation unsupported"); return; }
-            navigator.geolocation.getCurrentPosition((position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                updateFamilyMarker(lat, lon, "Your Current Location");
-            }, () => { alert("Check location permission flags."); });
-        }
-
-        function plotSharedLocation() {
-            const input = document.getElementById('coordInput').value;
-            const match = input.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
-            if (match) {
-                updateFamilyMarker(parseFloat(match[1]), parseFloat(match[2]), "Family Member Location Link");
-            } else {
-                alert("Provide numeric data formatted as: 35.2271, -80.8431");
-            }
-        }
-
-        function updateFamilyMarker(lat, lon, label) {
-            if (familyMarker) map.removeLayer(familyMarker);
-            familyMarker = L.marker([lat, lon]).addTo(map).bindPopup(label).openPopup();
-            map.setView([lat, lon], 10);
-        }
-
-        syncNetworkTime().then(() => {
-            setInterval(updateClocks, 1000);
-            updateClocks();
-        });
-    </script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
