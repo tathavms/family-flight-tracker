@@ -102,20 +102,41 @@ let use24Hour = localStorage.getItem('clockFormat') === '24';
 
 function now() { return new Date(Date.now() + clockOffsetMs); }
 
+function parseTimeApiMs(d) {
+  const iso = d.dateTime || d.utcDateTime || d.datetime;
+  if (iso) {
+    const ms = Date.parse(iso);
+    if (Number.isFinite(ms)) return ms;
+  }
+
+  if (Number.isFinite(d.unixTime)) return d.unixTime * 1000;
+  if (Number.isFinite(d.unixtime)) return d.unixtime * 1000;
+
+  const seconds = d.seconds ?? d.second ?? 0;
+  const millis = d.milliSeconds ?? d.milliseconds ?? 0;
+  return Date.UTC(d.year, d.month - 1, d.day, d.hour, d.minute, seconds, millis);
+}
+
 async function syncClock() {
   const badge = document.getElementById('sync-badge');
   const sources = [
     async () => {
-      const r = await fetch('https://timeapi.io/api/time/current/zone?timeZone=UTC');
+      const r = await fetch('https://timeapi.io/api/time/current/zone?timeZone=UTC', { cache: 'no-store' });
       if (!r.ok) throw new Error('timeapi.io ' + r.status);
       const d = await r.json();
-      return Date.UTC(d.year, d.month - 1, d.day, d.hour, d.minute, d.seconds, d.milliSeconds || 0);
+      return parseTimeApiMs(d);
     },
     async () => {
-      const r = await fetch('https://time.now/developer/api/timezone/UTC');
+      const r = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { cache: 'no-store' });
+      if (!r.ok) throw new Error('worldtimeapi ' + r.status);
+      const d = await r.json();
+      return parseTimeApiMs(d);
+    },
+    async () => {
+      const r = await fetch('https://time.now/developer/api/timezone/UTC', { cache: 'no-store' });
       if (!r.ok) throw new Error('time.now ' + r.status);
       const d = await r.json();
-      return new Date(d.datetime).getTime();
+      return parseTimeApiMs(d);
     }
   ];
 
@@ -123,8 +144,14 @@ async function syncClock() {
     try {
       const before = Date.now();
       const serverMs = await getServerMs();
-      const roundTrip = Date.now() - before;
-      clockOffsetMs = (serverMs + roundTrip / 2) - Date.now();
+      if (!Number.isFinite(serverMs)) throw new Error('invalid server time');
+      const after = Date.now();
+      const roundTrip = after - before;
+      const offset = serverMs - (before + roundTrip / 2);
+      if (Math.abs(offset) > 60 * 1000) {
+        throw new Error('suspicious clock offset ' + Math.round(offset / 1000) + 's');
+      }
+      clockOffsetMs = offset;
       if (badge) { badge.textContent = 'Time synced'; badge.style.color = 'var(--teal)'; }
       return;
     } catch (e) { /* try next source */ }
@@ -218,28 +245,108 @@ async function fetchOpenSky() {
   const { lamin, lomin, lamax, lomax } = FLIGHT.bbox;
   const url = `https://opensky-network.org/api/states/all?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`;
   try {
-    const r = await fetch(url);
+    const r = await fetch(url, { cache: 'no-store' });
     if (!r.ok) throw new Error('direct ' + r.status);
     return await r.json();
   } catch (e) {
     // OpenSky doesn't always send CORS headers for browser fetches — fall
     // back through a free public CORS proxy. Swap this URL if it's ever down.
     const proxied = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-    const r2 = await fetch(proxied);
-    if (!r2.ok) throw new Error('proxy ' + r2.status);
-    return await r2.json();
+    try {
+      const r2 = await fetch(proxied, { cache: 'no-store' });
+      if (!r2.ok) throw new Error('proxy ' + r2.status);
+      return await r2.json();
+    } catch (proxyErr) {
+      const backupProxy = 'https://corsproxy.io/?' + encodeURIComponent(url);
+      const r3 = await fetch(backupProxy, { cache: 'no-store' });
+      if (!r3.ok) throw new Error('backup proxy ' + r3.status);
+      return await r3.json();
+    }
   }
+}
+
+async function fetchAdsbExchangeStyle(hostname) {
+  const url = `https://${hostname}/v2/callsign/${FLIGHT.callsign}`;
+  const data = await fetchFlightJson(url);
+  const aircraft = data.ac || [];
+  const row = aircraft.find(a => (a.flight || '').replace(/\s+/g, '').toUpperCase() === FLIGHT.callsign) || aircraft[0];
+  if (!row || typeof row.lat !== 'number' || typeof row.lon !== 'number') return null;
+
+  const altitudeFt = Number(row.alt_geom || row.alt_baro);
+  return {
+    lat: row.lat,
+    lon: row.lon,
+    altitudeM: Number.isFinite(altitudeFt) ? Math.round(altitudeFt * 0.3048) : 0,
+    speedKmh: Number.isFinite(Number(row.gs)) ? Math.round(Number(row.gs) * 1.852) : 0,
+    track: Number(row.track) || 0,
+    onGround: row.alt_baro === 'ground'
+  };
+}
+
+async function fetchFlightJson(url) {
+  const urls = [
+    url,
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    'https://corsproxy.io/?' + encodeURIComponent(url)
+  ];
+
+  let lastError;
+  for (const candidate of urls) {
+    try {
+      const r = await fetch(candidate, { cache: 'no-store' });
+      if (!r.ok) throw new Error(candidate + ' ' + r.status);
+      return await r.json();
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+
+function normalizeOpenSkyRow(row) {
+  const [, , , , , lon, lat, baroAlt, onGround, velocity, trueTrack, , , geoAlt] = row;
+  return {
+    lat,
+    lon,
+    altitudeM: geoAlt || baroAlt || 0,
+    speedKmh: velocity ? Math.round(velocity * 3.6) : 0,
+    track: trueTrack || 0,
+    onGround
+  };
+}
+
+async function fetchFlightPosition() {
+  let lastError;
+
+  try {
+    const data = await fetchOpenSky();
+    const rows = data.states || [];
+    const row = rows.find(r => (r[1] || '').replace(/\s+/g, '').toUpperCase() === FLIGHT.callsign);
+    if (row) return normalizeOpenSkyRow(row);
+  } catch (err) {
+    lastError = err;
+  }
+
+  for (const hostname of ['api.airplanes.live', 'api.adsb.lol']) {
+    try {
+      const position = await fetchAdsbExchangeStyle(hostname);
+      if (position) return position;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (lastError) throw lastError;
+  return null;
 }
 
 async function updateFlight() {
   const dot = document.getElementById('flight-live-dot');
   const note = document.getElementById('flight-note');
   try {
-    const data = await fetchOpenSky();
-    const rows = data.states || [];
-    const row = rows.find(r => (r[1] || '').replace(/\s+/g, '').toUpperCase() === FLIGHT.callsign);
+    const position = await fetchFlightPosition();
 
-    if (!row) {
+    if (!position) {
       dot.classList.remove('live');
       document.getElementById('flight-status').textContent = 'No live signal';
       document.getElementById('flight-altitude').textContent = '—';
@@ -252,9 +359,9 @@ async function updateFlight() {
     }
 
     note.classList.add('hidden');
-    const [, , , , , lon, lat, baroAlt, onGround, velocity, trueTrack, , , geoAlt] = row;
-    const altitude = geoAlt || baroAlt || 0;
-    const speedKmh = velocity ? Math.round(velocity * 3.6) : 0;
+    const { lat, lon, altitudeM, speedKmh, track, onGround } = position;
+    const altitude = altitudeM;
+    const trueTrack = track;
 
     dot.classList.add('live');
     document.getElementById('flight-status').textContent = onGround ? 'On ground' : 'En route';
@@ -441,7 +548,7 @@ function stopSharing() {
 }
 
 function initSharing() {
-  const firebaseApp = initializeApp(FIREBASE_CONFIG);
+  const firebaseApp = initializeApp(firebaseConfig);
   db = getDatabase(firebaseApp);
 
   const nameInput = document.getElementById('share-name');
