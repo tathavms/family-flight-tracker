@@ -340,6 +340,20 @@ async function fetchFlightPosition() {
   return null;
 }
 
+function showFlightFallbackNote(message) {
+  const note = document.getElementById('flight-note');
+  note.textContent = '';
+  note.append(document.createTextNode(message + ' '));
+
+  const link = document.createElement('a');
+  link.href = 'https://www.flightaware.com/live/flight/DLH428';
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = 'Continue tracking on FlightAware';
+  note.appendChild(link);
+  note.append(document.createTextNode('.'));
+  note.classList.remove('hidden');
+}
 async function updateFlight() {
   const dot = document.getElementById('flight-live-dot');
   const note = document.getElementById('flight-note');
@@ -353,8 +367,7 @@ async function updateFlight() {
       document.getElementById('flight-speed').textContent = '—';
       document.getElementById('flight-progress').textContent = '—';
       document.getElementById('flight-updated').textContent = new Date().toLocaleTimeString();
-      note.textContent = `OpenSky isn't reporting ${FLIGHT.label} right now. That's expected if it hasn't departed yet, has already landed, or is over the mid-Atlantic where ground-based ADS-B coverage is thin (OpenSky uses ground receivers, not satellites). You can cross-check at flightaware.com/live/flight/DLH428.`;
-      note.classList.remove('hidden');
+      showFlightFallbackNote(`OpenSky isn't reporting ${FLIGHT.label} right now. That's expected if it hasn't departed yet, has already landed, or is over the mid-Atlantic where ground-based ADS-B coverage is thin.`);
       return;
     }
 
@@ -383,8 +396,7 @@ async function updateFlight() {
   } catch (err) {
     dot.classList.remove('live');
     document.getElementById('flight-status').textContent = 'Tracker unavailable';
-    note.textContent = 'Could not reach the flight data source just now. It will retry automatically on the next refresh.';
-    note.classList.remove('hidden');
+    showFlightFallbackNote('Could not reach the flight data source just now. Ocean coverage gaps and public tracker limits can cause this.');
     console.error('Flight tracker error:', err);
   }
 }
