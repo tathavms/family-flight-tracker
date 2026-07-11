@@ -18,9 +18,12 @@
 * { box-sizing: border-box; }
 
 html, body {
+  width: 100%;
+  overflow-x: hidden;
   margin: 0;
   padding: 0;
   background: var(--bg);
+  -webkit-text-size-adjust: 100%;
   color: var(--text);
   font-family: var(--font-body);
 }
@@ -52,8 +55,9 @@ input {
   border: 1px solid var(--line);
   color: var(--text);
   border-radius: 8px;
-  padding: 0.7rem 0.9rem;
-  font-size: 0.95rem;
+  min-height: 44px;
+  padding: 0.75rem 0.9rem;
+  font-size: 1rem;
 }
 
 input::placeholder { color: var(--muted); }
@@ -72,7 +76,7 @@ input::placeholder { color: var(--muted); }
 .gate-card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 2rem;
   width: 100%;
   max-width: 360px;
@@ -94,19 +98,20 @@ input::placeholder { color: var(--muted); }
 .app {
   max-width: 860px;
   margin: 0 auto;
-  padding: 1.5rem 1.25rem 3rem;
+  padding: calc(1rem + env(safe-area-inset-top)) 1rem calc(2rem + env(safe-area-inset-bottom));
 }
 
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 1.25rem;
+  gap: 1rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid var(--line);
   margin-bottom: 1.75rem;
 }
 
-.brand { display: flex; align-items: center; gap: 0.75rem; }
+.brand { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
 .brand-mark {
   font-size: 1.5rem;
   color: var(--amber);
@@ -114,7 +119,7 @@ input::placeholder { color: var(--muted); }
 }
 .brand h1 {
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 1rem;
   letter-spacing: 0.08em;
   margin: 0;
   text-transform: uppercase;
@@ -137,7 +142,9 @@ input::placeholder { color: var(--muted); }
   color: var(--muted);
   font-family: var(--font-display);
   font-size: 0.75rem;
-  padding: 0.45rem 0.7rem;
+  min-width: 48px;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
   letter-spacing: 0.05em;
 }
 .fmt-btn.active {
@@ -146,7 +153,7 @@ input::placeholder { color: var(--muted); }
   font-weight: 700;
 }
 
-.section { margin-bottom: 2.25rem; }
+.section { margin-bottom: 1.75rem; }
 .section-head {
   display: flex;
   align-items: center;
@@ -175,14 +182,14 @@ input::placeholder { color: var(--muted); }
 /* ---------- Clocks (split-flap board look) ---------- */
 .clocks {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
 }
 .clock-card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 1.4rem 1rem;
+  border-radius: 8px;
+  padding: 1.2rem 0.9rem;
   text-align: center;
 }
 .clock-zone {
@@ -195,7 +202,7 @@ input::placeholder { color: var(--muted); }
 .clock-time {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: clamp(1.6rem, 6vw, 2.5rem);
+  font-size: 1.9rem;
   color: var(--amber);
   text-shadow: 0 0 16px var(--amber-glow);
   margin: 0;
@@ -219,8 +226,9 @@ input::placeholder { color: var(--muted); }
   opacity: 0.85;
 }
 
-@media (max-width: 520px) {
-  .clocks { grid-template-columns: 1fr; }
+@media (min-width: 560px) {
+  .clocks { grid-template-columns: 1fr 1fr; }
+  .clock-time { font-size: 2.35rem; }
 }
 
 /* ---------- Live dot ---------- */
@@ -246,7 +254,7 @@ input::placeholder { color: var(--muted); }
 .flight-card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 1.2rem;
 }
 .flight-route-label {
@@ -262,8 +270,8 @@ input::placeholder { color: var(--muted); }
 .route-line-label { color: var(--line); }
 
 .flight-map {
-  height: 220px;
-  border-radius: 10px;
+  height: 260px;
+  border-radius: 8px;
   overflow: hidden;
   background: var(--panel-alt);
   margin-bottom: 1rem;
@@ -271,7 +279,7 @@ input::placeholder { color: var(--muted); }
 
 .flight-readout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
 }
 .stat { display: flex; flex-direction: column; gap: 0.15rem; }
@@ -295,6 +303,21 @@ input::placeholder { color: var(--muted); }
   padding-top: 0.8rem;
 }
 .flight-note a { color: var(--teal); }
+.flight-fallback-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.85rem;
+  min-height: 44px;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  background: var(--amber);
+  color: #1a1305 !important;
+  font-weight: 700;
+  text-decoration: none;
+}
+.flight-fallback-link:hover { filter: brightness(1.08); }
 
 .plane-icon {
   color: var(--amber);
@@ -309,11 +332,13 @@ input::placeholder { color: var(--muted); }
   margin-bottom: 0.6rem;
   flex-wrap: wrap;
 }
-.share-controls input { flex: 1; min-width: 160px; }
+.share-controls input { flex: 1 1 100%; min-width: 0; }
+.share-controls .btn { width: 100%; }
 
 .btn {
+  min-height: 44px;
   border-radius: 8px;
-  padding: 0.7rem 1.1rem;
+  padding: 0.75rem 1rem;
   font-size: 0.88rem;
   font-weight: 600;
   transition: transform 0.08s ease, filter 0.15s ease;
@@ -329,7 +354,7 @@ input::placeholder { color: var(--muted); }
   border: 1px solid var(--line);
   color: var(--muted);
   font-size: 0.78rem;
-  padding: 0.45rem 0.8rem;
+  padding: 0.6rem 0.85rem;
   border-radius: 8px;
 }
 .btn-ghost:hover { color: var(--text); border-color: var(--teal); }
@@ -342,8 +367,8 @@ input::placeholder { color: var(--muted); }
 }
 
 .family-map {
-  height: 320px;
-  border-radius: 10px;
+  height: 360px;
+  border-radius: 8px;
   overflow: hidden;
   background: var(--panel-alt);
   border: 1px solid var(--line);
@@ -363,7 +388,7 @@ input::placeholder { color: var(--muted); }
   gap: 0.6rem;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0.6rem 0.9rem;
   font-size: 0.85rem;
 }
@@ -417,4 +442,38 @@ input::placeholder { color: var(--muted); }
   background: var(--panel) !important;
   color: var(--text) !important;
   border-color: var(--line) !important;
+}
+
+@media (max-width: 420px) {
+  .app { padding-left: 0.75rem; padding-right: 0.75rem; }
+  .topbar { align-items: flex-start; }
+  .brand-mark { font-size: 1.25rem; }
+  .brand h1 { font-size: 0.95rem; }
+  .subtitle { font-size: 0.74rem; }
+  .section-head { align-items: flex-start; }
+  .section-head h2 { font-size: 0.82rem; }
+  .sync-badge { text-align: right; max-width: 9rem; }
+  .clock-time { font-size: 1.75rem; }
+  .flight-card { padding: 0.9rem; }
+  .flight-map { height: 240px; }
+  .flight-readout { gap: 0.7rem; }
+  .stat-value { font-size: 0.88rem; overflow-wrap: anywhere; }
+  .share-controls { flex-direction: column; }
+  .share-controls .btn { width: 100%; }
+  .family-map { height: 340px; }
+  .sharers-list li { align-items: flex-start; flex-wrap: wrap; }
+  .sharers-list .freshness { flex-basis: 100%; margin-left: 1.5rem; }
+}
+
+@media (min-width: 720px) {
+  .app { padding: 1.5rem 1.25rem 3rem; }
+  .brand h1 { font-size: 1.1rem; }
+  .section { margin-bottom: 2.25rem; }
+  .clock-card { padding: 1.4rem 1rem; }
+  .flight-map { height: 280px; }
+  .flight-readout { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+  .flight-fallback-link { display: inline-flex; width: auto; }
+  .share-controls input { flex: 1; min-width: 160px; }
+  .share-controls .btn { width: auto; }
+  .family-map { height: 360px; }
 }

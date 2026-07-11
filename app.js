@@ -251,17 +251,10 @@ async function fetchOpenSky() {
   } catch (e) {
     // OpenSky doesn't always send CORS headers for browser fetches — fall
     // back through a free public CORS proxy. Swap this URL if it's ever down.
-    const proxied = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-    try {
-      const r2 = await fetch(proxied, { cache: 'no-store' });
-      if (!r2.ok) throw new Error('proxy ' + r2.status);
-      return await r2.json();
-    } catch (proxyErr) {
-      const backupProxy = 'https://corsproxy.io/?' + encodeURIComponent(url);
-      const r3 = await fetch(backupProxy, { cache: 'no-store' });
-      if (!r3.ok) throw new Error('backup proxy ' + r3.status);
-      return await r3.json();
-    }
+    const proxied = 'https://corsproxy.io/?' + encodeURIComponent(url);
+    const r2 = await fetch(proxied, { cache: 'no-store' });
+    if (!r2.ok) throw new Error('proxy ' + r2.status);
+    return await r2.json();
   }
 }
 
@@ -286,7 +279,6 @@ async function fetchAdsbExchangeStyle(hostname) {
 async function fetchFlightJson(url) {
   const urls = [
     url,
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
     'https://corsproxy.io/?' + encodeURIComponent(url)
   ];
 
@@ -343,17 +335,18 @@ async function fetchFlightPosition() {
 function showFlightFallbackNote(message) {
   const note = document.getElementById('flight-note');
   note.textContent = '';
-  note.append(document.createTextNode(message + ' '));
+  note.append(document.createTextNode(message));
 
   const link = document.createElement('a');
   link.href = 'https://www.flightaware.com/live/flight/DLH428';
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
+  link.className = 'flight-fallback-link';
   link.textContent = 'Continue tracking on FlightAware';
   note.appendChild(link);
-  note.append(document.createTextNode('.'));
   note.classList.remove('hidden');
 }
+
 async function updateFlight() {
   const dot = document.getElementById('flight-live-dot');
   const note = document.getElementById('flight-note');
