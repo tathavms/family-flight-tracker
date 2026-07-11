@@ -32,6 +32,109 @@ const firebaseConfig = {
 const FAMILY_PASSCODE = "srishti96";
 
 // =====================================================================
+// Clocks — corrected against a free online time API, ticked locally
+// =====================================================================
+
+let clockOffsetMs = 0; // serverTime - deviceTime, added to Date.now()
+let use24Hour = localStorage.getItem('clockFormat') === '24';
+
+function now() { return new Date(Date.now() + clockOffsetMs); }
+
+function parseTimeApiMs(d) {
+  const iso = d.dateTime || d.utcDateTime || d.datetime;
+  if (iso) {
+    const ms = Date.parse(iso);
+    if (Number.isFinite(ms)) return ms;
+  }
+  if (Number.isFinite(d.unixTime)) return d.unixTime * 1000;
+  if (Number.isFinite(d.unixtime)) return d.unixtime * 1000;
+  const seconds = d.seconds ?? d.second ?? 0;
+  const millis = d.milliSeconds ?? d.milliseconds ?? 0;
+  return Date.UTC(d.year, d.month - 1, d.day, d.hour, d.minute, seconds, millis);
+}
+
+async function syncClock() {
+  const badge = document.getElementById('sync-badge');
+  const sources = [
+    async () => {
+      const r = await fetch('https://timeapi.io/api/time/current/zone?timeZone=UTC', { cache: 'no-store' });
+      if (!r.ok) throw new Error('timeapi.io ' + r.status);
+      return parseTimeApiMs(await r.json());
+    },
+    async () => {
+      const r = await fetch('https://time.now/developer/api/timezone/UTC', { cache: 'no-store' });
+      if (!r.ok) throw new Error('time.now ' + r.status);
+      return parseTimeApiMs(await r.json());
+    }
+  ];
+
+  for (const getServerMs of sources) {
+    try {
+      const before = Date.now();
+      const serverMs = await getServerMs();
+      if (!Number.isFinite(serverMs)) throw new Error('invalid server time');
+      const after = Date.now();
+      const roundTrip = after - before;
+      const offset = serverMs - (before + roundTrip / 2);
+      if (Math.abs(offset) > 60 * 1000) throw new Error('suspicious offset');
+      clockOffsetMs = offset;
+      if (badge) { badge.textContent = 'Time synced'; badge.style.color = 'var(--teal)'; }
+      return;
+    } catch (e) { /* try next source */ }
+  }
+  clockOffsetMs = 0;
+  if (badge) { badge.textContent = 'Using device clock'; badge.style.color = 'var(--muted)'; }
+}
+
+function formatZone(date, timeZone) {
+  const time = new Intl.DateTimeFormat('en-US', {
+    timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: !use24Hour
+  }).format(date);
+  const dateStr = new Intl.DateTimeFormat('en-US', {
+    timeZone, weekday: 'long', day: 'numeric', month: 'long'
+  }).format(date);
+  return { time, date: dateStr };
+}
+
+function renderClocks() {
+  const d = now();
+  const ist = formatZone(d, 'Asia/Kolkata');
+  const clt = formatZone(d, 'America/New_York');
+  document.getElementById('time-ist').textContent = ist.time;
+  document.getElementById('date-ist').textContent = ist.date;
+  document.getElementById('time-clt').textContent = clt.time;
+  document.getElementById('date-clt').textContent = clt.date;
+}
+
+function setFormat(fmt) {
+  use24Hour = fmt === '24';
+  localStorage.setItem('clockFormat', fmt);
+  document.getElementById('fmt-12').classList.toggle('active', !use24Hour);
+  document.getElementById('fmt-24').classList.toggle('active', use24Hour);
+  renderClocks();
+}
+
+function startClocks() {
+  document.getElementById('fmt-12').addEventListener('click', () => setFormat('12'));
+  document.getElementById('fmt-24').addEventListener('click', () => setFormat('24'));
+  setFormat(use24Hour ? '24' : '12');
+  syncClock();
+  renderClocks();
+  setInterval(renderClocks, 1000);
+  setInterval(syncClock, 15 * 60 * 1000);
+}
+
+function timeAgo(ms) {
+  const s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 5) return 'just now';
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  return `${h}h ago`;
+}
+
+// =====================================================================
 // Family location sharing — Firebase Realtime Database + Leaflet
 // =====================================================================
 
