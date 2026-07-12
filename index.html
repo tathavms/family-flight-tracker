@@ -67,6 +67,32 @@
         </article>
       </div>
     </section>
+
+    <!-- ============ Section 2: Time converter ============ -->
+    <section class="section" aria-labelledby="convert-heading">
+      <div class="section-head">
+        <h2 id="convert-heading">Time converter</h2>
+        <button id="convert-now" class="btn btn-ghost" title="Reset to current time">Now</button>
+      </div>
+      <div class="convert-card">
+        <input type="date" id="convert-date" class="convert-date">
+
+        <div class="convert-row">
+          <label for="convert-ist">IST · India</label>
+          <input type="time" id="convert-ist" step="60">
+        </div>
+
+        <div class="convert-arrow">⇅</div>
+
+        <div class="convert-row">
+          <label for="convert-clt">Charlotte, USA</label>
+          <input type="time" id="convert-clt" step="60">
+        </div>
+
+        <p id="convert-note" class="convert-note"></p>
+      </div>
+    </section>
+    
     <!-- ============ Section 3: Family location sharing ============ -->
     <section class="section" aria-labelledby="map-heading">
       <div class="section-head">

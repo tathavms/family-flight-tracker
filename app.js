@@ -302,11 +302,97 @@ function initSharing() {
 }
 
 // =====================================================================
+// Time converter — IST ⇄ Charlotte, DST-aware
+// =====================================================================
+
+let convertEditingSide = null; // 'ist' | 'clt' | null while user is typing
+
+function zonedOffsetMinutes(utcDate, timeZone) {
+  // How far `timeZone` is ahead of UTC, in minutes, on this exact date
+  // (handles DST automatically since it asks the real IANA data for that date).
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+  const parts = Object.fromEntries(dtf.formatToParts(utcDate).map(p => [p.type, p.value]));
+  const asUTC = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+  return Math.round((asUTC - utcDate.getTime()) / 60000);
+}
+
+function convertBetweenZones(dateStr, timeStr, fromZone, toZone) {
+  const [y, mo, d] = dateStr.split('-').map(Number);
+  const [h, mi] = timeStr.split(':').map(Number);
+  // Rough UTC guess, then correct using that zone's actual offset for this date.
+  let guessUtcMs = Date.UTC(y, mo - 1, d, h, mi);
+  const fromOffset = zonedOffsetMinutes(new Date(guessUtcMs), fromZone);
+  const utcMs = guessUtcMs - fromOffset * 60000;
+  const toOffset = zonedOffsetMinutes(new Date(utcMs), toZone);
+  return new Date(utcMs + toOffset * 60000);
+}
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function fillConverter(baseUtcMs) {
+  const dateInput = document.getElementById('convert-date');
+  const istInput = document.getElementById('convert-ist');
+  const cltInput = document.getElementById('convert-clt');
+
+  const istOffset = zonedOffsetMinutes(new Date(baseUtcMs), 'Asia/Kolkata');
+  const istLocal = new Date(baseUtcMs + istOffset * 60000);
+  const cltOffset = zonedOffsetMinutes(new Date(baseUtcMs), 'America/New_York');
+  const cltLocal = new Date(baseUtcMs + cltOffset * 60000);
+
+  dateInput.value = `${istLocal.getUTCFullYear()}-${pad2(istLocal.getUTCMonth() + 1)}-${pad2(istLocal.getUTCDate())}`;
+  istInput.value = `${pad2(istLocal.getUTCHours())}:${pad2(istLocal.getUTCMinutes())}`;
+  cltInput.value = `${pad2(cltLocal.getUTCHours())}:${pad2(cltLocal.getUTCMinutes())}`;
+
+  const dayGap = istLocal.getUTCDate() !== cltLocal.getUTCDate() ? ' · different calendar day' : '';
+  const diffHours = ((istOffset - cltOffset) / 60).toFixed(1).replace('.0', '');
+  document.getElementById('convert-note').textContent =
+    `IST is ${diffHours} hours ahead of Charlotte on this date${dayGap}.`;
+}
+
+function onConverterInput(side) {
+  convertEditingSide = side;
+  const dateStr = document.getElementById('convert-date').value;
+  const istStr = document.getElementById('convert-ist').value;
+  const cltStr = document.getElementById('convert-clt').value;
+  if (!dateStr || !istStr || !cltStr) return;
+
+  if (side === 'ist') {
+    const result = convertBetweenZones(dateStr, istStr, 'Asia/Kolkata', 'America/New_York');
+    document.getElementById('convert-clt').value = `${pad2(result.getUTCHours())}:${pad2(result.getUTCMinutes())}`;
+  } else {
+    const result = convertBetweenZones(dateStr, cltStr, 'America/New_York', 'Asia/Kolkata');
+    document.getElementById('convert-ist').value = `${pad2(result.getUTCHours())}:${pad2(result.getUTCMinutes())}`;
+  }
+
+  const istOffset = zonedOffsetMinutes(new Date(), 'Asia/Kolkata');
+  const cltOffset = zonedOffsetMinutes(new Date(), 'America/New_York');
+  const diffHours = ((istOffset - cltOffset) / 60).toFixed(1).replace('.0', '');
+  document.getElementById('convert-note').textContent = `IST is ${diffHours} hours ahead of Charlotte on this date.`;
+  convertEditingSide = null;
+}
+
+function startConverter() {
+  fillConverter(now().getTime());
+  document.getElementById('convert-ist').addEventListener('input', () => onConverterInput('ist'));
+  document.getElementById('convert-clt').addEventListener('input', () => onConverterInput('clt'));
+  document.getElementById('convert-date').addEventListener('input', () => {
+    // Re-anchor both times to the newly picked date, keeping the IST clock time fixed.
+    const istStr = document.getElementById('convert-ist').value || '12:00';
+    onConverterInput('ist');
+  });
+  document.getElementById('convert-now').addEventListener('click', () => fillConverter(now().getTime()));
+}
+// =====================================================================
 // Optional passcode gate + boot
 // =====================================================================
 
 function boot() {
   startClocks();
+  startConverter();  
   initSharing();
 }
 
